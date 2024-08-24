@@ -212,31 +212,33 @@ contract TestEtherWallet is Test {
     }
 
     // Test receiving Ether directly to the contract
-    function test_receiveAndFallback() public {
-        // test receive
+    function test_receive() public {
         vm.startPrank(USER);
-        (bool successRec,) = address(test_EtherWallet).call{value: SEND_VALUE}("");
-        assertTrue(successRec);
+        (bool success,) = address(test_EtherWallet).call{value: SEND_VALUE}("");
+        assertTrue(success);
         vm.stopPrank();
 
         // Verify the contract's balance and funder records
-        uint256 contractBalanceRec = test_EtherWallet.getBalance();
-        assertEq(contractBalanceRec, SEND_VALUE);
+        uint256 contractBalance = test_EtherWallet.getBalance();
+        assertEq(contractBalance, SEND_VALUE);
 
-        uint256 fundedAmountRec = test_EtherWallet.getFunderToFundAmount(USER);
-        assertEq(fundedAmountRec, SEND_VALUE);
+        uint256 fundedAmount = test_EtherWallet.getFunderToFundAmount(USER);
+        assertEq(fundedAmount, SEND_VALUE);
+    }
 
-        // test fallback
+    // Test the fallback function when sending data with Ether
+    function test_fallback() public {
+        bytes memory randomData = "Random Data";
         vm.startPrank(USER);
-        (bool successFall,) = address(test_EtherWallet).call{value: SEND_VALUE}(RANDOM_DATA);
-        assertTrue(successFall);
+        (bool success,) = address(test_EtherWallet).call{value: SEND_VALUE}(randomData);
+        assertTrue(success);
         vm.stopPrank();
 
         // Verify the contract's balance and funder records
-        uint256 contractBalanceFall = test_EtherWallet.getBalance();
-        assertEq(contractBalanceFall, SEND_VALUE);
+        uint256 contractBalance = test_EtherWallet.getBalance();
+        assertEq(contractBalance, SEND_VALUE);
 
-        uint256 fundedAmountFall = test_EtherWallet.getFunderToFundAmount(USER);
-        assertEq(fundedAmountFall, SEND_VALUE);
+        uint256 fundedAmount = test_EtherWallet.getFunderToFundAmount(USER);
+        assertEq(fundedAmount, SEND_VALUE);
     }
 }
