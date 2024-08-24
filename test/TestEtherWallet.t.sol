@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.19;
+
 import {Test} from "forge-std/Test.sol";
 import {DeployEtherWallet} from "../script/DeployEtherWallet.s.sol";
 import {EtherWallet} from "../src/EtherWallet.sol";
@@ -151,10 +152,7 @@ contract TestEtherWallet is Test {
 
         // Expect the Withdrawn event to be emitted
         vm.expectEmit(true, true, true, true);
-        emit EtherWallet.Withdrawn(
-            test_EtherWallet.getOwner(),
-            test_EtherWallet.getBalance()
-        );
+        emit EtherWallet.Withdrawn(test_EtherWallet.getOwner(), test_EtherWallet.getBalance());
 
         test_EtherWallet.withdraw();
         vm.stopPrank();
@@ -200,10 +198,7 @@ contract TestEtherWallet is Test {
         vm.stopPrank();
 
         // Verify that the contract's balance is correct
-        assertEq(
-            test_EtherWallet.getBalance(),
-            address(test_EtherWallet).balance
-        );
+        assertEq(test_EtherWallet.getBalance(), address(test_EtherWallet).balance);
     }
 
     // Test if a user has funded the contract
@@ -220,9 +215,7 @@ contract TestEtherWallet is Test {
     function test_receiveAndFallback() public {
         // test receive
         vm.startPrank(USER);
-        (bool successRec, ) = address(test_EtherWallet).call{value: SEND_VALUE}(
-            ""
-        );
+        (bool successRec,) = address(test_EtherWallet).call{value: SEND_VALUE}("");
         assertTrue(successRec);
         vm.stopPrank();
 
@@ -233,12 +226,9 @@ contract TestEtherWallet is Test {
         uint256 fundedAmountRec = test_EtherWallet.getFunderToFundAmount(USER);
         assertEq(fundedAmountRec, SEND_VALUE);
 
-
         // test fallback
         vm.startPrank(USER);
-        (bool successFall, ) = address(test_EtherWallet).call{value: SEND_VALUE}(
-            RANDOM_DATA
-        );
+        (bool successFall,) = address(test_EtherWallet).call{value: SEND_VALUE}(RANDOM_DATA);
         assertTrue(successFall);
         vm.stopPrank();
 
@@ -249,5 +239,4 @@ contract TestEtherWallet is Test {
         uint256 fundedAmountFall = test_EtherWallet.getFunderToFundAmount(USER);
         assertEq(fundedAmountFall, SEND_VALUE);
     }
-        
 }

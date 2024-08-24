@@ -58,10 +58,7 @@ contract EtherWallet {
 
     // Function to fund the contract, ensuring the value meets the minimum USD requirement
     function fund() public payable whenNotPaused {
-        require(
-            msg.value.conversionRate(s_priceFeed) >= MINIMUM_USD,
-            "Insufficient Amount!!!"
-        );
+        require(msg.value.conversionRate(s_priceFeed) >= MINIMUM_USD, "Insufficient Amount!!!");
         s_funderToFundAmount[msg.sender] += msg.value; // Update the funder's balance
 
         // NOT WORKING:------
@@ -98,18 +95,14 @@ contract EtherWallet {
         uint256 balance = address(this).balance; // Store the balance before modifying state
 
         // Reset each funder's balance
-        for (
-            uint256 funderIndex = 0;
-            funderIndex < s_funders.length;
-            funderIndex++
-        ) {
+        for (uint256 funderIndex = 0; funderIndex < s_funders.length; funderIndex++) {
             address funder = s_funders[funderIndex];
             s_funderToFundAmount[funder] = 0;
         }
         s_funders = new address[](0); // Clear the funders array
 
         // Transfer the contract's balance to the owner
-        (bool callSuccess, ) = payable(msg.sender).call{value: balance}("");
+        (bool callSuccess,) = payable(msg.sender).call{value: balance}("");
         require(callSuccess, "Withdrawal Failed!!!");
 
         emit Withdrawn(msg.sender, balance); // Emit a withdrawn event
@@ -144,9 +137,7 @@ contract EtherWallet {
         return s_funders.length;
     }
 
-    function getFunderToFundAmount(
-        address funder
-    ) external view returns (uint256) {
+    function getFunderToFundAmount(address funder) external view returns (uint256) {
         return s_funderToFundAmount[funder];
     }
 
