@@ -27,6 +27,13 @@ contract TestEtherWallet is Test {
         vm.deal(USER2, STARTING_BALANCE);
     }
 
+    modifier funded() {
+        vm.startPrank(USER);
+        test_EtherWallet.fund{value: SEND_VALUE}();
+        vm.stopPrank();
+        _;
+    }
+
     // Test the contract's constructor settings
     function test_OwnerIsSender() public view {
         // Verify that the contract owner is the deployer
@@ -73,11 +80,7 @@ contract TestEtherWallet is Test {
     }
 
     // Test adding funder to the array
-    function test_FundAddToArray() public {
-        vm.startPrank(USER);
-        test_EtherWallet.fund{value: SEND_VALUE}();
-        vm.stopPrank();
-
+    function test_FundAddToArray() public funded {
         // Check the funder is added to array once only
         address funder = test_EtherWallet.getFunder(0);
         assertEq(funder, USER);
@@ -142,17 +145,17 @@ contract TestEtherWallet is Test {
     }
 
     // Test withdrawing funds by the owner
-    function test_WithdrawFundOwner() public {
-        vm.startPrank(USER);
-        test_EtherWallet.fund{value: SEND_VALUE}();
-        vm.stopPrank();
+    function test_WithdrawFundOwner() public funded {
         assertTrue(test_EtherWallet.getBalance() != 0);
 
         vm.startPrank(test_EtherWallet.getOwner());
 
         // Expect the Withdrawn event to be emitted
         vm.expectEmit(true, true, true, true);
-        emit EtherWallet.Withdrawn(test_EtherWallet.getOwner(), test_EtherWallet.getBalance());
+        emit EtherWallet.Withdrawn(
+            test_EtherWallet.getOwner(),
+            test_EtherWallet.getBalance()
+        );
 
         test_EtherWallet.withdraw();
         vm.stopPrank();
@@ -170,15 +173,15 @@ contract TestEtherWallet is Test {
     }
 
     // Test that funder array and mapping are reset after withdrawal
-    function test_WithdrawArrayReset() public {
-        vm.startPrank(USER);
-        test_EtherWallet.fund{value: SEND_VALUE}();
-        vm.stopPrank();
-
-        vm.startPrank(USER2);
-        test_EtherWallet.fund{value: SEND_VALUE}();
-        vm.stopPrank();
-
+    function test_WithdrawArrayReset() public funded {
+        uint160 numberOfFunders = 10;
+        uint160 startingFunderIndex = 2;
+        for (uint160 i = startingFunderIndex; i < numberOfFunders + startingFunderIndex; i++) {
+            // we get hoax from stdcheats
+            // prank + deal
+            hoax(address(i), STARTING_BALANCE);
+            test_EtherWallet.fund{value: SEND_VALUE}();
+        }
         vm.startPrank(test_EtherWallet.getOwner());
         test_EtherWallet.withdraw();
         vm.stopPrank();
@@ -192,21 +195,16 @@ contract TestEtherWallet is Test {
     }
 
     // Test the contract's balance retrieval function
-    function test_getBalance() public {
-        vm.startPrank(USER);
-        test_EtherWallet.fund{value: SEND_VALUE}();
-        vm.stopPrank();
-
+    function test_getBalance() public funded {
         // Verify that the contract's balance is correct
-        assertEq(test_EtherWallet.getBalance(), address(test_EtherWallet).balance);
+        assertEq(
+            test_EtherWallet.getBalance(),
+            address(test_EtherWallet).balance
+        );
     }
 
     // Test if a user has funded the contract
-    function test_hasFunded() public {
-        vm.startPrank(USER);
-        test_EtherWallet.fund{value: SEND_VALUE}();
-        vm.stopPrank();
-
+    function test_hasFunded() public funded {
         // Verify that the user has indeed funded
         assertTrue(test_EtherWallet.gethasFunded(USER));
     }
@@ -214,7 +212,9 @@ contract TestEtherWallet is Test {
     // Test receiving Ether directly to the contract
     function test_receive() public {
         vm.startPrank(USER);
-        (bool success,) = address(test_EtherWallet).call{value: SEND_VALUE}("");
+        (bool success, ) = address(test_EtherWallet).call{value: SEND_VALUE}(
+            ""
+        );
         assertTrue(success);
         vm.stopPrank();
 
@@ -230,7 +230,9 @@ contract TestEtherWallet is Test {
     function test_fallback() public {
         bytes memory randomData = "Random Data";
         vm.startPrank(USER);
-        (bool success,) = address(test_EtherWallet).call{value: SEND_VALUE}(randomData);
+        (bool success, ) = address(test_EtherWallet).call{value: SEND_VALUE}(
+            randomData
+        );
         assertTrue(success);
         vm.stopPrank();
 

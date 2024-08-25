@@ -93,9 +93,9 @@ contract EtherWallet {
     // Function to withdraw all funds, only accessible to the owner and when the contract is not paused
     function withdraw() public onlyOwner whenNotPaused {
         uint256 balance = address(this).balance; // Store the balance before modifying state
-
+        uint256 fundersLength = s_funders.length;
         // Reset each funder's balance
-        for (uint256 funderIndex = 0; funderIndex < s_funders.length; funderIndex++) {
+        for (uint256 funderIndex = 0; funderIndex < fundersLength; funderIndex++) {
             address funder = s_funders[funderIndex];
             s_funderToFundAmount[funder] = 0;
         }
