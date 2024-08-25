@@ -152,10 +152,7 @@ contract TestEtherWallet is Test {
 
         // Expect the Withdrawn event to be emitted
         vm.expectEmit(true, true, true, true);
-        emit EtherWallet.Withdrawn(
-            test_EtherWallet.getOwner(),
-            test_EtherWallet.getBalance()
-        );
+        emit EtherWallet.Withdrawn(test_EtherWallet.getOwner(), test_EtherWallet.getBalance());
 
         test_EtherWallet.withdraw();
         vm.stopPrank();
@@ -197,10 +194,7 @@ contract TestEtherWallet is Test {
     // Test the contract's balance retrieval function
     function test_getBalance() public funded {
         // Verify that the contract's balance is correct
-        assertEq(
-            test_EtherWallet.getBalance(),
-            address(test_EtherWallet).balance
-        );
+        assertEq(test_EtherWallet.getBalance(), address(test_EtherWallet).balance);
     }
 
     // Test if a user has funded the contract
@@ -212,9 +206,7 @@ contract TestEtherWallet is Test {
     // Test receiving Ether directly to the contract
     function test_receive() public {
         vm.startPrank(USER);
-        (bool success, ) = address(test_EtherWallet).call{value: SEND_VALUE}(
-            ""
-        );
+        (bool success,) = address(test_EtherWallet).call{value: SEND_VALUE}("");
         assertTrue(success);
         vm.stopPrank();
 
@@ -230,9 +222,7 @@ contract TestEtherWallet is Test {
     function test_fallback() public {
         bytes memory randomData = "Random Data";
         vm.startPrank(USER);
-        (bool success, ) = address(test_EtherWallet).call{value: SEND_VALUE}(
-            randomData
-        );
+        (bool success,) = address(test_EtherWallet).call{value: SEND_VALUE}(randomData);
         assertTrue(success);
         vm.stopPrank();
 
