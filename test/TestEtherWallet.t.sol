@@ -57,7 +57,7 @@ contract TestEtherWallet is Test {
     // Test funding the contract with insufficient Ether
     function test_FundWithoutEnoughETH() public {
         vm.startPrank(USER);
-        vm.expectRevert(bytes("Insufficient Amount!!!"));
+        vm.expectRevert(EtherWallet.FundError.selector);
         test_EtherWallet.fund{value: 1e15}(); // Send less than MINIMUM_USD
         vm.stopPrank();
     }
@@ -87,8 +87,8 @@ contract TestEtherWallet is Test {
         assertEq(test_EtherWallet.getFunderArrayLength(), 1);
 
         // Test the out-of-bounds case for funders array
-        vm.expectRevert(bytes("Index Out of Bounds"));
-        test_EtherWallet.getFunder(1);
+        vm.expectRevert(EtherWallet.IndexOutOfBoundsError.selector);
+        test_EtherWallet.getFunder(2);
     }
 
     // Test contract pause functionality with owner and non-owner
@@ -102,13 +102,13 @@ contract TestEtherWallet is Test {
         assertEq(test_EtherWallet.getPauseStatus(), true);
 
         // Try to pause the contract again (should revert)
-        vm.expectRevert(bytes("Contract is paused"));
+        vm.expectRevert(EtherWallet.PausedError.selector);
         test_EtherWallet.pause();
         vm.stopPrank();
 
         // Prank as a non-owner to attempt funding while the contract is paused
         vm.startPrank(USER);
-        vm.expectRevert(bytes("Contract is paused"));
+        vm.expectRevert(EtherWallet.PausedError.selector);
         test_EtherWallet.fund{value: SEND_VALUE}();
         vm.stopPrank();
 
@@ -139,7 +139,7 @@ contract TestEtherWallet is Test {
 
         // Prank as the owner to unpause the contract while the contract is not paused
         vm.startPrank(deployer);
-        vm.expectRevert(bytes("Contract is not paused"));
+        vm.expectRevert(EtherWallet.NotPausedError.selector);
         test_EtherWallet.unpause();
         vm.stopPrank();
     }

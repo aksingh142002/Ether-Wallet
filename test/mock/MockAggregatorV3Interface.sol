@@ -53,7 +53,7 @@ contract MockV3Aggregator is AggregatorV3Interface {
      * @param _timestamp The timestamp for this round
      * @param _startedAt The start time for this round
      */
-    function updateRoundData(uint80 _roundId, int256 _answer, uint256 _timestamp, uint256 _startedAt) public {
+    function updateRoundData(uint80 _roundId, int256 _answer, uint256 _timestamp, uint256 _startedAt) external {
         latestRound = _roundId;
         latestAnswer = _answer;
         latestTimestamp = _timestamp;

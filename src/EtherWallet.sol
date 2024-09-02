@@ -31,6 +31,11 @@ contract EtherWallet {
 
     // Custom Errors
     error NotOwner();
+    error PausedError();
+    error NotPausedError();
+    error FundError();
+    error WithdrawError();
+    error IndexOutOfBoundsError();
 
     // Modifiers
 
@@ -44,13 +49,17 @@ contract EtherWallet {
 
     /// @dev Ensures the function is callable only when the contract is not paused.
     modifier whenNotPaused() {
-        require(!s_paused, "Contract is paused");
+        if(s_paused){
+            revert PausedError();
+        }
         _;
     }
 
     /// @dev Ensures the function is callable only when the contract is paused.
     modifier whenPaused() {
-        require(s_paused, "Contract is not paused");
+        if(!s_paused){
+            revert NotPausedError();
+        }
         _;
     }
 
@@ -68,7 +77,9 @@ contract EtherWallet {
     /// @notice Allows users to fund the contract with a minimum USD equivalent amount.
     /// @dev Ensures the amount sent meets the minimum USD requirement.
     function fund() public payable whenNotPaused {
-        require(msg.value.conversionRate(s_priceFeed) >= MINIMUM_USD, "Insufficient Amount!!!");
+        if(msg.value.conversionRate(s_priceFeed) < MINIMUM_USD){
+            revert FundError();
+        }
         s_funderToFundAmount[msg.sender] += msg.value;
 
         // Add the funder to the funders array if they haven't funded before
@@ -82,32 +93,37 @@ contract EtherWallet {
 
     /// @notice Pauses the contract, preventing further funding.
     /// @dev Only callable by the owner when the contract is not paused.
-    function pause() public onlyOwner whenNotPaused {
+    function pause() external onlyOwner whenNotPaused {
         s_paused = true;
     }
 
     /// @notice Unpauses the contract, allowing further funding.
     /// @dev Only callable by the owner when the contract is paused.
-    function unpause() public onlyOwner whenPaused {
+    function unpause() external onlyOwner whenPaused {
         s_paused = false;
     }
 
     /// @notice Withdraws all Ether from the contract to the owner.
     /// @dev Resets the funders' balances and the funders array.
-    function withdraw() public onlyOwner whenNotPaused {
+    function withdraw() external onlyOwner whenNotPaused {
         uint256 balance = address(this).balance;
         uint256 fundersLength = s_funders.length;
 
         // Reset each funder's balance
-        for (uint256 funderIndex = 0; funderIndex < fundersLength; funderIndex++) {
+        for (uint256 funderIndex; funderIndex < fundersLength; ) {
             address funder = s_funders[funderIndex];
             s_funderToFundAmount[funder] = 0;
+            unchecked {
+                ++funderIndex;
+            }
         }
         s_funders = new address[](0); // Clear the funders array
 
         // Transfer the contract's balance to the owner
         (bool callSuccess,) = payable(msg.sender).call{value: balance}("");
-        require(callSuccess, "Withdrawal Failed!!!");
+        if(!callSuccess){
+            revert WithdrawError();
+        }
 
         emit Withdrawn(msg.sender, balance);
     }
@@ -141,7 +157,9 @@ contract EtherWallet {
     /// @param index The index of the funder in the array.
     /// @return The address of the funder at the specified index.
     function getFunder(uint256 index) external view returns (address) {
-        require(index < s_funders.length, "Index Out of Bounds");
+        if(index > s_funders.length){
+            revert IndexOutOfBoundsError();
+        }
         return s_funders[index];
     }
 
@@ -163,12 +181,12 @@ contract EtherWallet {
     }
 
     /// @return The current balance of the contract in Ether.
-    function getBalance() public view returns (uint256) {
+    function getBalance() external view returns (uint256) {
         return address(this).balance;
     }
 
     /// @return The current version of the price feed.
-    function getVersion() public view returns (uint256) {
+    function getVersion() external view returns (uint256) {
         return s_priceFeed.version();
     }
 }

@@ -12,7 +12,7 @@ library PriceConverter {
     /// @notice Retrieves the latest price of Ether in USD from the Chainlink price feed.
     /// @param feed The address of the Chainlink AggregatorV3Interface contract.
     /// @return The latest Ether price in USD, scaled by 1e18.
-    function getPrice(AggregatorV3Interface feed) internal view returns (uint256) {
+    function getPrice(AggregatorV3Interface feed) private view returns (uint256) {
         (, int256 price,,,) = feed.latestRoundData(); // Get the latest price
         return uint256(price * 1e10); // Adjust the price to have 18 decimal places
     }
