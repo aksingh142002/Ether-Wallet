@@ -1,42 +1,40 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.19;
+pragma solidity 0.8.20;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {PriceConverter} from "./PriceConverter.sol";
 
-// Recheck funder array, s_funderToFundAmount  working in remix & test case
+/// @title EtherWallet - A smart contract wallet for handling Ether deposits and withdrawals
+/// @notice This contract allows users to fund the wallet, while only the owner can withdraw funds.
+/// @dev The contract uses Chainlink's price feed to enforce a minimum funding amount in USD.
 
 contract EtherWallet {
-    // Custom Error
-    error NotOwner();
-
     using PriceConverter for uint256;
 
-    uint256 public constant MINIMUM_USD = 5e18;
-    bool private s_paused; // State variable to track if the contract is paused
+    // Constants
+    uint256 public constant MINIMUM_USD = 5e18; // Minimum USD equivalent to fund the contract
 
-    // List of funders and mapping to track how much each address has funded
-    address[] private s_funders;
-    mapping(address => uint256) private s_funderToFundAmount;
-    mapping(address => bool) private s_hasFunded; // Track if an address has already funded
-
+    // State Variables
+    bool private s_paused; // Tracks if the contract is paused
     address private immutable i_owner; // Owner of the contract, set at deployment
+    AggregatorV3Interface private immutable s_priceFeed; // Chainlink Price Feed
 
-    AggregatorV3Interface private s_priceFeed;
+    // Mappings and Arrays
+    address[] private s_funders; // List of unique funders
+    mapping(address => uint256) private s_funderToFundAmount; // Tracks the amount funded by each address
+    mapping(address => bool) private s_hasFunded; // Tracks if an address has already funded
 
-    // Events to log actions on the blockchain
+    // Events
     event Funded(address indexed funder, uint256 amount);
     event Withdrawn(address indexed to, uint256 amount);
 
-    // Constructor sets the contract owner and initializes the paused state
-    constructor(address feed) {
-        i_owner = msg.sender;
-        s_priceFeed = AggregatorV3Interface(feed);
-        s_paused = false;
-    }
+    // Custom Errors
+    error NotOwner();
 
-    // Modifier to restrict access to owner-only functions
+    // Modifiers
+
+    /// @dev Restricts function access to only the contract owner.
     modifier onlyOwner() {
         if (msg.sender != i_owner) {
             revert NotOwner();
@@ -44,56 +42,62 @@ contract EtherWallet {
         _;
     }
 
-    // Modifier to ensure a function can only be called when the contract is not paused
+    /// @dev Ensures the function is callable only when the contract is not paused.
     modifier whenNotPaused() {
         require(!s_paused, "Contract is paused");
         _;
     }
 
-    // Modifier to ensure a function can only be called when the contract is paused
+    /// @dev Ensures the function is callable only when the contract is paused.
     modifier whenPaused() {
         require(s_paused, "Contract is not paused");
         _;
     }
 
-    // Function to fund the contract, ensuring the value meets the minimum USD requirement
+    // Constructor
+
+    /// @param feed The address of the Chainlink price feed contract.
+    constructor(address feed) {
+        i_owner = msg.sender; // Set the owner to the deployer
+        s_priceFeed = AggregatorV3Interface(feed); // Initialize the price feed
+        s_paused = false; // Start the contract in an unpaused state
+    }
+
+    // Core Functions
+
+    /// @notice Allows users to fund the contract with a minimum USD equivalent amount.
+    /// @dev Ensures the amount sent meets the minimum USD requirement.
     function fund() public payable whenNotPaused {
         require(msg.value.conversionRate(s_priceFeed) >= MINIMUM_USD, "Insufficient Amount!!!");
-        s_funderToFundAmount[msg.sender] += msg.value; // Update the funder's balance
+        s_funderToFundAmount[msg.sender] += msg.value;
 
-        // NOT WORKING:------
         // Add the funder to the funders array if they haven't funded before
         if (!s_hasFunded[msg.sender]) {
             s_funders.push(msg.sender);
             s_hasFunded[msg.sender] = true;
         }
-        emit Funded(msg.sender, msg.value); // Emit a funded event
+
+        emit Funded(msg.sender, msg.value);
     }
 
-    // Function to pause the contract, can only be called by the owner
+    /// @notice Pauses the contract, preventing further funding.
+    /// @dev Only callable by the owner when the contract is not paused.
     function pause() public onlyOwner whenNotPaused {
         s_paused = true;
     }
 
-    // Function to unpause the contract, can only be called by the owner
+    /// @notice Unpauses the contract, allowing further funding.
+    /// @dev Only callable by the owner when the contract is paused.
     function unpause() public onlyOwner whenPaused {
         s_paused = false;
     }
 
-    // Function to get the current balance of the contract in Ether
-    function getBalance() public view returns (uint256) {
-        return address(this).balance;
-    }
-
-    // Function to get the current price feed version
-    function getVersion() public view returns (uint256) {
-        return s_priceFeed.version();
-    }
-
-    // Function to withdraw all funds, only accessible to the owner and when the contract is not paused
+    /// @notice Withdraws all Ether from the contract to the owner.
+    /// @dev Resets the funders' balances and the funders array.
     function withdraw() public onlyOwner whenNotPaused {
-        uint256 balance = address(this).balance; // Store the balance before modifying state
+        uint256 balance = address(this).balance;
         uint256 fundersLength = s_funders.length;
+
         // Reset each funder's balance
         for (uint256 funderIndex = 0; funderIndex < fundersLength; funderIndex++) {
             address funder = s_funders[funderIndex];
@@ -105,43 +109,66 @@ contract EtherWallet {
         (bool callSuccess,) = payable(msg.sender).call{value: balance}("");
         require(callSuccess, "Withdrawal Failed!!!");
 
-        emit Withdrawn(msg.sender, balance); // Emit a withdrawn event
+        emit Withdrawn(msg.sender, balance);
     }
 
-    // Fallback function to handle plain Ether transfers, directs to the fund function
+    // Fallback Functions
+
+    /// @notice Fallback function to handle plain Ether transfers.
+    /// @dev Directs the transfer to the fund function.
     receive() external payable {
         fund();
     }
 
-    // Fallback function to handle calls with data, directs to the fund function
+    /// @notice Fallback function to handle calls with data.
+    /// @dev Directs the call to the fund function.
     fallback() external payable {
         fund();
     }
 
-    // <---  Getters   --->
+    // Getters
 
+    /// @return The owner of the contract.
     function getOwner() external view returns (address) {
         return i_owner;
     }
 
+    /// @return The paused status of the contract.
     function getPauseStatus() external view returns (bool) {
         return s_paused;
     }
 
+    /// @param index The index of the funder in the array.
+    /// @return The address of the funder at the specified index.
     function getFunder(uint256 index) external view returns (address) {
         require(index < s_funders.length, "Index Out of Bounds");
         return s_funders[index];
     }
 
+    /// @return The number of unique funders.
     function getFunderArrayLength() external view returns (uint256) {
         return s_funders.length;
     }
 
+    /// @param funder The address of the funder.
+    /// @return The amount funded by the specified address.
     function getFunderToFundAmount(address funder) external view returns (uint256) {
         return s_funderToFundAmount[funder];
     }
 
+    /// @param funder The address of the funder.
+    /// @return A boolean indicating if the address has funded the contract.
     function gethasFunded(address funder) external view returns (bool) {
         return s_hasFunded[funder];
+    }
+
+    /// @return The current balance of the contract in Ether.
+    function getBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
+
+    /// @return The current version of the price feed.
+    function getVersion() public view returns (uint256) {
+        return s_priceFeed.version();
     }
 }

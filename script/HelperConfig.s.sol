@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import {Script} from "forge-std/Script.sol";
 import {MockV3Aggregator} from "../test/mock/MockAggregatorV3Interface.sol";
