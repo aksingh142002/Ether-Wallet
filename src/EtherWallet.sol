@@ -49,7 +49,7 @@ contract EtherWallet {
 
     /// @dev Ensures the function is callable only when the contract is not paused.
     modifier whenNotPaused() {
-        if(s_paused){
+        if (s_paused) {
             revert PausedError();
         }
         _;
@@ -57,7 +57,7 @@ contract EtherWallet {
 
     /// @dev Ensures the function is callable only when the contract is paused.
     modifier whenPaused() {
-        if(!s_paused){
+        if (!s_paused) {
             revert NotPausedError();
         }
         _;
@@ -77,7 +77,7 @@ contract EtherWallet {
     /// @notice Allows users to fund the contract with a minimum USD equivalent amount.
     /// @dev Ensures the amount sent meets the minimum USD requirement.
     function fund() public payable whenNotPaused {
-        if(msg.value.conversionRate(s_priceFeed) < MINIMUM_USD){
+        if (msg.value.conversionRate(s_priceFeed) < MINIMUM_USD) {
             revert FundError();
         }
         s_funderToFundAmount[msg.sender] += msg.value;
@@ -110,7 +110,7 @@ contract EtherWallet {
         uint256 fundersLength = s_funders.length;
 
         // Reset each funder's balance
-        for (uint256 funderIndex; funderIndex < fundersLength; ) {
+        for (uint256 funderIndex; funderIndex < fundersLength;) {
             address funder = s_funders[funderIndex];
             s_funderToFundAmount[funder] = 0;
             unchecked {
@@ -121,7 +121,7 @@ contract EtherWallet {
 
         // Transfer the contract's balance to the owner
         (bool callSuccess,) = payable(msg.sender).call{value: balance}("");
-        if(!callSuccess){
+        if (!callSuccess) {
             revert WithdrawError();
         }
 
@@ -157,7 +157,7 @@ contract EtherWallet {
     /// @param index The index of the funder in the array.
     /// @return The address of the funder at the specified index.
     function getFunder(uint256 index) external view returns (address) {
-        if(index > s_funders.length){
+        if (index > s_funders.length) {
             revert IndexOutOfBoundsError();
         }
         return s_funders[index];
