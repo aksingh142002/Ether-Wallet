@@ -3,6 +3,7 @@
 pragma solidity ^0.8.19;
 
 import {Test} from "forge-std/Test.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {DeployEtherWallet} from "../script/DeployEtherWallet.s.sol";
 import {EtherWallet} from "../src/EtherWallet.sol";
 
@@ -13,6 +14,7 @@ contract TestEtherWallet is Test {
     uint256 constant SEND_VALUE = 0.1 ether;
     uint256 constant STARTING_BALANCE = 10 ether;
     bytes constant RANDOM_DATA = "Random Data";
+    address SEPOLIA_ADDRESS = 0x694AA1769357215DE4FAC081bf1f309aDC325306;
 
     address deployer;
     EtherWallet test_EtherWallet;
@@ -27,19 +29,25 @@ contract TestEtherWallet is Test {
         vm.deal(USER2, STARTING_BALANCE);
     }
 
+    // Test the contract's constructor settings
+    function test_constructor() public {
+        AggregatorV3Interface mockPriceFeed = AggregatorV3Interface(SEPOLIA_ADDRESS);
+
+        EtherWallet newEtherWallet = new EtherWallet(address(mockPriceFeed));
+
+        // Verify that the contract owner is the deployer
+        assertEq(newEtherWallet.getOwner(), address(this));
+        // Verify the Chainlink pricefeed
+        assertEq(address(newEtherWallet.s_priceFeed()), SEPOLIA_ADDRESS);
+        // Verify that the contract is not paused initially
+        assertFalse(newEtherWallet.getPauseStatus());
+    }
+
     modifier funded() {
         vm.startPrank(USER);
         test_EtherWallet.fund{value: SEND_VALUE}();
         vm.stopPrank();
         _;
-    }
-
-    // Test the contract's constructor settings
-    function test_OwnerIsSender() public view {
-        // Verify that the contract owner is the deployer
-        assertEq(test_EtherWallet.getOwner(), deployer);
-        // Verify that the contract is not paused initially
-        assertEq(test_EtherWallet.getPauseStatus(), false);
     }
 
     // Test the minimum USD value requirement

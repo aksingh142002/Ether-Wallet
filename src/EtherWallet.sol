@@ -18,7 +18,7 @@ contract EtherWallet {
     // State Variables
     bool private s_paused; // Tracks if the contract is paused
     address private immutable i_owner; // Owner of the contract, set at deployment
-    AggregatorV3Interface private immutable s_priceFeed; // Chainlink Price Feed
+    AggregatorV3Interface public immutable s_priceFeed; // Chainlink Price Feed
 
     // Mappings and Arrays
     address[] private s_funders; // List of unique funders
